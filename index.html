@@ -2,65 +2,46 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>MSB & OB PRO 2.0</title>
+<title>Scalping MSB OB Sweep Pro</title>
 <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
 
 <style>
-body {
-  margin:0;
-  background:#0b0b0b;
-  color:white;
-  font-family:Arial;
-}
-
-#controls {
-  padding:10px;
-  background:#111;
-  display:flex;
-  gap:10px;
-}
-
-select {
-  background:#1a1a1a;
-  color:white;
-  border:1px solid #333;
-  padding:5px;
-}
-
-#chart {
-  height:90vh;
-}
+body{margin:0;background:#0b0b0b;color:white;font-family:Arial}
+#controls{padding:10px;background:#111;display:flex;gap:10px}
+select{background:#1a1a1a;color:white;border:1px solid #333;padding:5px}
+#chart{height:90vh}
 </style>
 </head>
 
 <body>
 
 <div id="controls">
-  Pair:
-  <select id="symbol">
-    <option value="btcusdt">BTCUSDT</option>
-    <option value="ethusdt">ETHUSDT</option>
-  </select>
+Pair:
+<select id="symbol">
+<option value="btcusdt">BTCUSDT</option>
+<option value="ethusdt">ETHUSDT</option>
+</select>
 
-  TF:
-  <select id="interval">
-    <option value="1m" selected>1m</option>
-    <option value="5m">5m</option>
-    <option value="15m">15m</option>
-    <option value="1h">1h</option>
-  </select>
+TF:
+<select id="interval">
+<option value="1m" selected>1m</option>
+<option value="5m">5m</option>
+<option value="15m">15m</option>
+</select>
 </div>
 
 <div id="chart"></div>
 
 <script>
+
+// ===== CHART SETUP =====
 const chart = LightweightCharts.createChart(
 document.getElementById('chart'),
 {
-  layout:{background:{color:'#0b0b0b'},textColor:'#fff'},
-  grid:{vertLines:{color:'#1f1f1f'},horzLines:{color:'#1f1f1f'}},
-  width:window.innerWidth,
-  height:window.innerHeight-60
+layout:{background:{color:'#0b0b0b'},textColor:'#fff'},
+grid:{vertLines:{color:'#1f1f1f'},horzLines:{color:'#1f1f1f'}},
+width:window.innerWidth,
+height:window.innerHeight-60
 });
 
 const candleSeries = chart.addCandlestickSeries();
@@ -69,126 +50,162 @@ let socket;
 let candles=[];
 let swingHigh=null;
 let swingLow=null;
-let trend="none";
 let orderBlocks=[];
+let sweepHigh=null;
+let sweepLow=null;
 
+// ===== DRAW OB =====
 function drawOB(ob){
-  const series = chart.addAreaSeries({
-    topColor: ob.type==="bull"?'rgba(0,255,0,0.25)':'rgba(255,0,0,0.25)',
-    bottomColor: ob.type==="bull"?'rgba(0,255,0,0.05)':'rgba(255,0,0,0.05)',
-    lineColor: ob.type==="bull"?'#00ff88':'#ff4444',
-    lineWidth:1
-  });
+const series = chart.addAreaSeries({
+topColor: ob.type==="bull"?'rgba(0,255,0,0.25)':'rgba(255,0,0,0.25)',
+bottomColor: ob.type==="bull"?'rgba(0,255,0,0.05)':'rgba(255,0,0,0.05)',
+lineColor: ob.type==="bull"?'#00ff88':'#ff4444',
+lineWidth:1
+});
 
-  series.setData([
-    {time:ob.start,value:ob.high},
-    {time:ob.end,value:ob.high}
-  ]);
+series.setData([
+{time:ob.start,value:ob.high},
+{time:ob.end,value:ob.high}
+]);
 
-  ob.series=series;
+ob.series=series;
 }
 
+// ===== MAIN STRUCTURE LOGIC =====
 function detectStructure(){
-  if(candles.length<10) return;
 
-  let latest=candles[candles.length-1];
+if(candles.length<10) return;
 
-  // Swing detect
-  for(let i=candles.length-5;i<candles.length-2;i++){
-    let p=candles[i-1],c=candles[i],n=candles[i+1];
-    if(!p||!n) continue;
+let latest=candles[candles.length-1];
 
-    if(c.high>p.high && c.high>n.high) swingHigh=c;
-    if(c.low<p.low && c.low<n.low) swingLow=c;
-  }
+// ---- SWING DETECTION ----
+for(let i=candles.length-5;i<candles.length-2;i++){
+let p=candles[i-1],c=candles[i],n=candles[i+1];
+if(!p||!n) continue;
 
-  // Bullish Break
-  if(swingHigh && latest.close>swingHigh.high){
-    trend="bull";
-
-    let obCandle=null;
-    for(let i=candles.length-2;i>=0;i--){
-      if(candles[i].close<candles[i].open){
-        obCandle=candles[i];
-        break;
-      }
-    }
-
-    if(obCandle){
-      let ob={
-        type:"bull",
-        high:obCandle.high,
-        low:obCandle.low,
-        start:obCandle.time,
-        end:latest.time+3600
-      };
-      orderBlocks.push(ob);
-      drawOB(ob);
-    }
-  }
-
-  // Bearish Break
-  if(swingLow && latest.close<swingLow.low){
-    trend="bear";
-
-    let obCandle=null;
-    for(let i=candles.length-2;i>=0;i--){
-      if(candles[i].close>candles[i].open){
-        obCandle=candles[i];
-        break;
-      }
-    }
-
-    if(obCandle){
-      let ob={
-        type:"bear",
-        high:obCandle.high,
-        low:obCandle.low,
-        start:obCandle.time,
-        end:latest.time+3600
-      };
-      orderBlocks.push(ob);
-      drawOB(ob);
-    }
-  }
-
-  // Invalidation
-  orderBlocks.forEach(ob=>{
-    if(ob.type==="bull" && latest.low<ob.low){
-      ob.series.setData([]);
-    }
-    if(ob.type==="bear" && latest.high>ob.high){
-      ob.series.setData([]);
-    }
-  });
+if(c.high>p.high && c.high>n.high) swingHigh=c;
+if(c.low<p.low && c.low<n.low) swingLow=c;
 }
 
+// ===== LIQUIDITY SWEEP =====
+if(swingHigh){
+if(latest.high>swingHigh.high && latest.close<swingHigh.high){
+sweepHigh=latest;
+
+const sweepLine = chart.addLineSeries({
+color:'#ff0000',
+lineWidth:2
+});
+sweepLine.setData([
+{time:swingHigh.time,value:swingHigh.high},
+{time:latest.time,value:swingHigh.high}
+]);
+}
+}
+
+if(swingLow){
+if(latest.low<swingLow.low && latest.close>swingLow.low){
+sweepLow=latest;
+
+const sweepLine = chart.addLineSeries({
+color:'#00ffcc',
+lineWidth:2
+});
+sweepLine.setData([
+{time:swingLow.time,value:swingLow.low},
+{time:latest.time,value:swingLow.low}
+]);
+}
+}
+
+// ===== BULLISH BREAK =====
+if(swingHigh && latest.close>swingHigh.high){
+
+let obCandle=null;
+for(let i=candles.length-2;i>=0;i--){
+if(candles[i].close<candles[i].open){
+obCandle=candles[i];
+break;
+}
+}
+
+if(obCandle){
+let ob={
+type:"bull",
+high:obCandle.high,
+low:obCandle.low,
+start:obCandle.time,
+end:latest.time+3600
+};
+orderBlocks.push(ob);
+drawOB(ob);
+}
+}
+
+// ===== BEARISH BREAK =====
+if(swingLow && latest.close<swingLow.low){
+
+let obCandle=null;
+for(let i=candles.length-2;i>=0;i--){
+if(candles[i].close>candles[i].open){
+obCandle=candles[i];
+break;
+}
+}
+
+if(obCandle){
+let ob={
+type:"bear",
+high:obCandle.high,
+low:obCandle.low,
+start:obCandle.time,
+end:latest.time+3600
+};
+orderBlocks.push(ob);
+drawOB(ob);
+}
+}
+
+// ===== OB INVALIDATION =====
+orderBlocks.forEach(ob=>{
+if(ob.type==="bull" && latest.low<ob.low){
+ob.series.setData([]);
+}
+if(ob.type==="bear" && latest.high>ob.high){
+ob.series.setData([]);
+}
+});
+
+}
+
+// ===== DATA FEED =====
 function connect(symbol,interval){
-  if(socket) socket.close();
-  candles=[];
-  orderBlocks=[];
 
-  socket=new WebSocket(`wss://stream.binance.com:9443/ws/${symbol}@kline_${interval}`);
+if(socket) socket.close();
+candles=[];
+orderBlocks=[];
 
-  socket.onmessage=(event)=>{
-    let data=JSON.parse(event.data);
-    let k=data.k;
+socket=new WebSocket(`wss://stream.binance.com:9443/ws/${symbol}@kline_${interval}`);
 
-    let candle={
-      time:k.t/1000,
-      open:+k.o,
-      high:+k.h,
-      low:+k.l,
-      close:+k.c
-    };
+socket.onmessage=(event)=>{
+let data=JSON.parse(event.data);
+let k=data.k;
 
-    candleSeries.update(candle);
+let candle={
+time:k.t/1000,
+open:+k.o,
+high:+k.h,
+low:+k.l,
+close:+k.c
+};
 
-    if(k.x){
-      candles.push(candle);
-      detectStructure();
-    }
-  }
+candleSeries.update(candle);
+
+if(k.x){
+candles.push(candle);
+detectStructure();
+}
+};
 }
 
 connect("btcusdt","1m");
@@ -200,6 +217,7 @@ connect(this.value,document.getElementById("interval").value);
 document.getElementById("interval").onchange=function(){
 connect(document.getElementById("symbol").value,this.value);
 }
+
 </script>
 
 </body>
