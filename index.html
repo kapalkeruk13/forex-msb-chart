@@ -1,49 +1,61 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Forex MSB Chart</title>
-  <script src="https://s3.tradingview.com/tv.js"></script>
-</head>
-
-<body style="margin:0;background:#0e0e0e;">
-
-<select id="pairSelect" 
-        style="position:absolute;z-index:1000;padding:8px;font-size:16px;">
-  <option value="FX:EURUSD">EURUSD</option>
-  <option value="FX:GBPUSD">GBPUSD</option>
-  <option value="FX:USDJPY">USDJPY</option>
-  <option value="FX:AUDUSD">AUDUSD</option>
-  <option value="FX:USDCAD">USDCAD</option>
-  <option value="FX:USDCHF">USDCHF</option>
-  <option value="OANDA:XAUUSD">XAUUSD (Gold)</option>
-</select>
-
-<div id="chart" style="height:100vh;"></div>
+<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
 
 <script>
 
-function loadChart(symbol) {
-  new TradingView.widget({
-    "autosize": true,
-    "symbol": symbol,
-    "interval": "5",
-    "timezone": "Asia/Jakarta",
-    "theme": "dark",
-    "style": "1",
-    "container_id": "chart"
-  });
-}
-
-// default pertama
-loadChart("FX:EURUSD");
-
-// ganti pair saat dropdown berubah
-document.getElementById("pairSelect").addEventListener("change", function() {
-  document.getElementById("chart").innerHTML = "";
-  loadChart(this.value);
+const chart = LightweightCharts.createChart(document.getElementById('chart'), {
+    layout: {
+        background: { color: '#0e0e0e' },
+        textColor: '#DDD',
+    },
+    grid: {
+        vertLines: { color: '#1f1f1f' },
+        horzLines: { color: '#1f1f1f' },
+    },
 });
 
-</script>
+const candleSeries = chart.addCandlestickSeries();
 
-</body>
-</html>
+let data = [];
+
+// Dummy test data (nanti kita sambungkan realtime)
+for (let i = 0; i < 200; i++) {
+    data.push({
+        time: 1700000000 + i * 60,
+        open: 100 + Math.random() * 10,
+        high: 105 + Math.random() * 10,
+        low: 95 + Math.random() * 10,
+        close: 100 + Math.random() * 10,
+    });
+}
+
+candleSeries.setData(data);
+
+// === MSB LOGIC ===
+function detectMSB(data) {
+    for (let i = 2; i < data.length - 2; i++) {
+
+        // Swing High
+        if (
+            data[i].high > data[i-1].high &&
+            data[i].high > data[i+1].high
+        ) {
+            if (data[i+1].close > data[i].high) {
+                console.log("BOS UP at", data[i+1].time);
+            }
+        }
+
+        // Swing Low
+        if (
+            data[i].low < data[i-1].low &&
+            data[i].low < data[i+1].low
+        ) {
+            if (data[i+1].close < data[i].low) {
+                console.log("BOS DOWN at", data[i+1].time);
+            }
+        }
+    }
+}
+
+detectMSB(data);
+
+</script>
