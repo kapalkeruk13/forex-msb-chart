@@ -6,18 +6,43 @@
 </head>
 
 <body style="margin:0;background:#0e0e0e;">
+
+<select id="pairSelect" 
+        style="position:absolute;z-index:1000;padding:8px;font-size:16px;">
+  <option value="FX:EURUSD">EURUSD</option>
+  <option value="FX:GBPUSD">GBPUSD</option>
+  <option value="FX:USDJPY">USDJPY</option>
+  <option value="FX:AUDUSD">AUDUSD</option>
+  <option value="FX:USDCAD">USDCAD</option>
+  <option value="FX:USDCHF">USDCHF</option>
+  <option value="OANDA:XAUUSD">XAUUSD (Gold)</option>
+</select>
+
 <div id="chart" style="height:100vh;"></div>
 
 <script>
-new TradingView.widget({
-  "autosize": true,
-  "symbol": "FX:EURUSD",
-  "interval": "5",
-  "timezone": "Asia/Jakarta",
-  "theme": "dark",
-  "style": "1",
-  "container_id": "chart"
+
+function loadChart(symbol) {
+  new TradingView.widget({
+    "autosize": true,
+    "symbol": symbol,
+    "interval": "5",
+    "timezone": "Asia/Jakarta",
+    "theme": "dark",
+    "style": "1",
+    "container_id": "chart"
+  });
+}
+
+// default pertama
+loadChart("FX:EURUSD");
+
+// ganti pair saat dropdown berubah
+document.getElementById("pairSelect").addEventListener("change", function() {
+  document.getElementById("chart").innerHTML = "";
+  loadChart(this.value);
 });
+
 </script>
 
 </body>
