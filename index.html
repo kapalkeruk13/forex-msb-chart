@@ -1,95 +1,113 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Forex MSB Chart</title>
+<meta charset="UTF-8">
+<title>Forex MSB Pro Chart</title>
+
+<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+
+<style>
+body {
+  margin:0;
+  background:#0e0e0e;
+  color:white;
+  font-family:Arial;
+}
+
+#controls {
+  padding:10px;
+  background:#111;
+  display:flex;
+  gap:10px;
+}
+
+select {
+  padding:5px;
+  background:#222;
+  color:white;
+  border:1px solid #444;
+}
+
+#chart {
+  height:90vh;
+}
+</style>
 </head>
 
-<body style="margin:0; background:#0f0f0f; font-family:Arial;">
+<body>
 
-<!-- Pair Selector -->
-<select id="pairSelect" 
-        style="position:absolute;z-index:1000;padding:6px;margin:10px;">
-  <option value="FX:EURUSD">EURUSD</option>
-  <option value="FX:GBPUSD">GBPUSD</option>
-  <option value="FX:USDJPY">USDJPY</option>
-  <option value="FX:AUDUSD">AUDUSD</option>
-  <option value="FX:USDCAD">USDCAD</option>
-  <option value="FX:USDCHF">USDCHF</option>
-  <option value="OANDA:XAUUSD">XAUUSD (Gold)</option>
-</select>
+<div id="controls">
+  Pair:
+  <select id="symbol">
+    <option value="btcusdt">BTCUSDT</option>
+    <option value="ethusdt">ETHUSDT</option>
+  </select>
 
-<!-- Timeframe Selector -->
-<select id="tfSelect" 
-        style="position:absolute;left:180px;z-index:1000;padding:6px;margin:10px;">
-  <!-- Seconds -->
-  <option value="1S">1s</option>
-  <option value="5S">5s</option>
-  <option value="15S">15s</option>
-  <option value="30S">30s</option>
+  Timeframe:
+  <select id="interval">
+    <option value="1s">1s</option>
+    <option value="5s">5s</option>
+    <option value="1m" selected>1m</option>
+    <option value="5m">5m</option>
+    <option value="15m">15m</option>
+    <option value="1h">1h</option>
+  </select>
+</div>
 
-  <!-- Minutes -->
-  <option value="1" selected>1m</option>
-  <option value="3">3m</option>
-  <option value="5">5m</option>
-  <option value="15">15m</option>
-  <option value="30">30m</option>
-
-  <!-- Hours -->
-  <option value="60">1H</option>
-  <option value="120">2H</option>
-  <option value="240">4H</option>
-
-  <!-- Higher -->
-  <option value="D">1D</option>
-  <option value="W">1W</option>
-  <option value="M">1M</option>
-</select>
-
-<div id="chart" style="height:100vh;"></div>
-
-<script src="https://s3.tradingview.com/tv.js"></script>
+<div id="chart"></div>
 
 <script>
 
-let currentWidget;
-let currentSymbol = "FX:EURUSD";
-let currentTF = "1";
-
-function loadChart() {
-
-  if (currentWidget) {
-    document.getElementById("chart").innerHTML = "";
+const chart = LightweightCharts.createChart(
+  document.getElementById('chart'),
+  {
+    layout: {
+      background: { color: '#0e0e0e' },
+      textColor: '#ffffff'
+    },
+    grid: {
+      vertLines: { color: '#1f1f1f' },
+      horzLines: { color: '#1f1f1f' }
+    },
+    width: window.innerWidth,
+    height: window.innerHeight - 60,
   }
+);
 
-  currentWidget = new TradingView.widget({
-    "autosize": true,
-    "symbol": currentSymbol,
-    "interval": currentTF,
-    "timezone": "Asia/Jakarta",
-    "theme": "dark",
-    "style": "1",
-    "locale": "en",
-    "toolbar_bg": "#0f0f0f",
-    "enable_publishing": false,
-    "hide_top_toolbar": false,
-    "container_id": "chart"
-  });
+const candleSeries = chart.addCandlestickSeries();
+
+let socket;
+
+function connect(symbol, interval) {
+
+  if (socket) socket.close();
+
+  const url = `wss://stream.binance.com:9443/ws/${symbol}@kline_${interval}`;
+  socket = new WebSocket(url);
+
+  socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    const k = data.k;
+
+    candleSeries.update({
+      time: k.t / 1000,
+      open: parseFloat(k.o),
+      high: parseFloat(k.h),
+      low: parseFloat(k.l),
+      close: parseFloat(k.c)
+    });
+  };
 }
 
-loadChart();
+connect("btcusdt", "1m");
 
-// Pair Change
-document.getElementById("pairSelect").addEventListener("change", function() {
-  currentSymbol = this.value;
-  loadChart();
-});
+document.getElementById("symbol").onchange = function() {
+  connect(this.value, document.getElementById("interval").value);
+};
 
-// Timeframe Change
-document.getElementById("tfSelect").addEventListener("change", function() {
-  currentTF = this.value;
-  loadChart();
-});
+document.getElementById("interval").onchange = function() {
+  connect(document.getElementById("symbol").value, this.value);
+};
 
 </script>
 
