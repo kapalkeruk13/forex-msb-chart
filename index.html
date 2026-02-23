@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Forex MSB Chart</title>
+  <script src="https://s3.tradingview.com/tv.js"></script>
+</head>
+
+<body style="margin:0;background:#0e0e0e;">
+<div id="chart" style="height:100vh;"></div>
+
+<script>
+new TradingView.widget({
+  "autosize": true,
+  "symbol": "FX:EURUSD",
+  "interval": "5",
+  "timezone": "Asia/Jakarta",
+  "theme": "dark",
+  "style": "1",
+  "container_id": "chart"
+});
+</script>
+
+</body>
+</html>
