@@ -2,14 +2,14 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Forex Chart</title>
+  <title>Forex MSB Chart</title>
 </head>
 
-<body style="margin:0; background:#0f0f0f;">
+<body style="margin:0; background:#0f0f0f; font-family:Arial;">
 
-<!-- Dropdown Pair -->
+<!-- Pair Selector -->
 <select id="pairSelect" 
-        style="position:absolute;z-index:1000;padding:8px;font-size:16px;margin:10px;">
+        style="position:absolute;z-index:1000;padding:6px;margin:10px;">
   <option value="FX:EURUSD">EURUSD</option>
   <option value="FX:GBPUSD">GBPUSD</option>
   <option value="FX:USDJPY">USDJPY</option>
@@ -19,6 +19,33 @@
   <option value="OANDA:XAUUSD">XAUUSD (Gold)</option>
 </select>
 
+<!-- Timeframe Selector -->
+<select id="tfSelect" 
+        style="position:absolute;left:180px;z-index:1000;padding:6px;margin:10px;">
+  <!-- Seconds -->
+  <option value="1S">1s</option>
+  <option value="5S">5s</option>
+  <option value="15S">15s</option>
+  <option value="30S">30s</option>
+
+  <!-- Minutes -->
+  <option value="1" selected>1m</option>
+  <option value="3">3m</option>
+  <option value="5">5m</option>
+  <option value="15">15m</option>
+  <option value="30">30m</option>
+
+  <!-- Hours -->
+  <option value="60">1H</option>
+  <option value="120">2H</option>
+  <option value="240">4H</option>
+
+  <!-- Higher -->
+  <option value="D">1D</option>
+  <option value="W">1W</option>
+  <option value="M">1M</option>
+</select>
+
 <div id="chart" style="height:100vh;"></div>
 
 <script src="https://s3.tradingview.com/tv.js"></script>
@@ -26,8 +53,10 @@
 <script>
 
 let currentWidget;
+let currentSymbol = "FX:EURUSD";
+let currentTF = "1";
 
-function loadChart(symbol) {
+function loadChart() {
 
   if (currentWidget) {
     document.getElementById("chart").innerHTML = "";
@@ -35,8 +64,8 @@ function loadChart(symbol) {
 
   currentWidget = new TradingView.widget({
     "autosize": true,
-    "symbol": symbol,
-    "interval": "5",
+    "symbol": currentSymbol,
+    "interval": currentTF,
     "timezone": "Asia/Jakarta",
     "theme": "dark",
     "style": "1",
@@ -48,12 +77,18 @@ function loadChart(symbol) {
   });
 }
 
-// Default pertama
-loadChart("FX:EURUSD");
+loadChart();
 
-// Ganti pair saat dipilih
+// Pair Change
 document.getElementById("pairSelect").addEventListener("change", function() {
-  loadChart(this.value);
+  currentSymbol = this.value;
+  loadChart();
+});
+
+// Timeframe Change
+document.getElementById("tfSelect").addEventListener("change", function() {
+  currentTF = this.value;
+  loadChart();
 });
 
 </script>
