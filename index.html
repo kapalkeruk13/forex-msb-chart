@@ -1,7 +1,19 @@
-<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Forex MSB Chart</title>
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+</head>
+
+<body style="margin:0;background:#0e0e0e;">
+
+<div id="chart" style="height:100vh;"></div>
 
 <script>
 
+// =========================
+// CREATE CHART
+// =========================
 const chart = LightweightCharts.createChart(document.getElementById('chart'), {
     layout: {
         background: { color: '#0e0e0e' },
@@ -15,23 +27,32 @@ const chart = LightweightCharts.createChart(document.getElementById('chart'), {
 
 const candleSeries = chart.addCandlestickSeries();
 
+// =========================
+// DUMMY DATA (TEST)
+// =========================
 let data = [];
 
-// Dummy test data (nanti kita sambungkan realtime)
 for (let i = 0; i < 200; i++) {
+    let base = 100 + i * 0.2;
+
     data.push({
         time: 1700000000 + i * 60,
-        open: 100 + Math.random() * 10,
-        high: 105 + Math.random() * 10,
-        low: 95 + Math.random() * 10,
-        close: 100 + Math.random() * 10,
+        open: base + Math.random(),
+        high: base + 2 + Math.random(),
+        low: base - 2 - Math.random(),
+        close: base + (Math.random() - 0.5) * 3,
     });
 }
 
 candleSeries.setData(data);
 
-// === MSB LOGIC ===
+// =========================
+// MSB DETECTION
+// =========================
 function detectMSB(data) {
+
+    const markers = [];
+
     for (let i = 2; i < data.length - 2; i++) {
 
         // Swing High
@@ -40,7 +61,13 @@ function detectMSB(data) {
             data[i].high > data[i+1].high
         ) {
             if (data[i+1].close > data[i].high) {
-                console.log("BOS UP at", data[i+1].time);
+                markers.push({
+                    time: data[i+1].time,
+                    position: 'aboveBar',
+                    color: 'green',
+                    shape: 'arrowUp',
+                    text: 'BOS UP'
+                });
             }
         }
 
@@ -50,12 +77,23 @@ function detectMSB(data) {
             data[i].low < data[i+1].low
         ) {
             if (data[i+1].close < data[i].low) {
-                console.log("BOS DOWN at", data[i+1].time);
+                markers.push({
+                    time: data[i+1].time,
+                    position: 'belowBar',
+                    color: 'red',
+                    shape: 'arrowDown',
+                    text: 'BOS DOWN'
+                });
             }
         }
     }
+
+    candleSeries.setMarkers(markers);
 }
 
 detectMSB(data);
 
 </script>
+
+</body>
+</html>
